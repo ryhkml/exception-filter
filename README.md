@@ -1,6 +1,6 @@
 # Exception Filter
 
-The exception-filter is a process that handles all unhandled exceptions for specific errors.
+An exception-filter is a process that handles specific errors.
 This concept is based on [NestJS](https://docs.nestjs.com/exception-filters). However, in this implementation, exception-filter simply returns an HTTP response without content.
 By default, it returns a status code of 204. To return a different status code, use `/:status` as the HTTP status code value.
 For example: `http://127.0.0.1:10030/500`
