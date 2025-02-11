@@ -1,0 +1,6 @@
+!out
+out/*
+!out/.gitkeep
+
+diff.txt
+note.txt
