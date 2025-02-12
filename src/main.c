@@ -1,7 +1,5 @@
 #include <arpa/inet.h>
 #include <errno.h>
-#include <netinet/in.h>
-#include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -11,8 +9,11 @@
 #include <unistd.h>
 
 #include "http.h"
+#include "tp.h"
 
 volatile sig_atomic_t running = true;
+
+thread_pool_t *thread_pool;
 
 void handle_sigact(int sig) {
     (void)sig;
@@ -21,10 +22,19 @@ void handle_sigact(int sig) {
 
 int main(int argc, const char *argv[]) {
     uint16_t port = 10030;
+    int max_thread = thread_count();
+    int max_queue = MAX_QUEUE;
+    int max_conn = MAX_CONNECTIONS;
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--port") == 0 && i + 1 < argc) {
             port = (uint16_t)atoi(argv[i + 1]);
+        } else if (strcmp(argv[i], "--max-thread") == 0 && i + 1 < argc) {
+            max_thread = atoi(argv[i + 1]);
+        } else if (strcmp(argv[i], "--max-queue") == 0 && i + 1 < argc) {
+            max_queue = atoi(argv[i + 1]);
+        } else if (strcmp(argv[i], "--max-conn") == 0 && i + 1 < argc) {
+            max_conn = atoi(argv[i + 1]);
         }
     }
 
@@ -60,14 +70,20 @@ int main(int argc, const char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    if (listen(server_fd, MAX_CONNECTIONS) < 0) {
+    if (listen(server_fd, max_conn) < 0) {
         close(server_fd);
         return EXIT_FAILURE;
     }
 
     printf("Exception filter server listening on http://127.0.0.1:%d\n", port);
 
-    pthread_t thread_id;
+    thread_pool = thread_pool_create(max_thread, max_queue);
+    if (thread_pool == NULL) {
+        fprintf(stderr, "Failed to create thread pool\n");
+        close(server_fd);
+        return EXIT_FAILURE;
+    }
+
     socklen_t addr_len = sizeof(addr);
     while (running) {
         int client_socket = accept(server_fd, (struct sockaddr *)&addr, &addr_len);
@@ -85,22 +101,20 @@ int main(int argc, const char *argv[]) {
 
         int *new_sock = malloc(sizeof(int));
         if (new_sock == NULL) {
-            printf("Failed to allocate memory for socket descriptor\n");
+            printf("Failed to allocate memory for client socket\n");
             close(client_socket);
             continue;
         }
         *new_sock = client_socket;
 
-        if (pthread_create(&thread_id, NULL, thread_handler, (void *)new_sock) < 0) {
-            fprintf(stderr, "Failed to create thread\n");
+        if (thread_pool_add_task(thread_pool, conn_wrapper, (void *)new_sock) != 0) {
+            fprintf(stderr, "Failed to add task to thread pool\n");
             free(new_sock);
             close(client_socket);
-            continue;
         }
-
-        pthread_detach(thread_id);
     }
 
+    thread_pool_destroy(thread_pool);
     close(server_fd);
 
     return EXIT_SUCCESS;

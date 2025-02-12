@@ -18,6 +18,6 @@
 
 extern volatile sig_atomic_t running;
 
-void *thread_handler(void *socket_desc);
+void conn_wrapper(void *arg);
 
 #endif  // HTTP_H
