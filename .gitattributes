@@ -1,0 +1,4 @@
+# Don't count build and test in the language stats
+Makefile linguist-documentation
+test/**/*.c linguist-documentation
+test/**/*.h linguist-documentation
