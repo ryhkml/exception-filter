@@ -35,8 +35,8 @@ static void *thread_pool_thread(void *arg) {
 }
 
 thread_pool_t *thread_pool_create(int max_thread, int max_queue) {
-    thread_pool_t *pool;
-    if ((pool = (thread_pool_t *)malloc(sizeof(thread_pool_t))) == NULL) {
+    thread_pool_t *pool = (thread_pool_t *)malloc(sizeof(thread_pool_t));
+    if (pool == NULL) {
         printf("Failed to allocate memory for thread pool\n");
         return NULL;
     }
