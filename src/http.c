@@ -13,7 +13,7 @@ static void send_res(int client_socket, int status_code) {
     char res_header[BUFFER_SIZE];
     char res[BUFFER_SIZE * 2];
     // Buffer for formatted date strings
-    char date_str_header[BUFFER_SIZE];
+    char date_str_header[256];
     char date_str[128];
 
     const char *status_message = NULL;
@@ -222,10 +222,10 @@ static void send_res(int client_socket, int status_code) {
 }
 
 static void handle_conn(int client_socket) {
-    char buff[BUFFER_SIZE] = {0};
-    char method[BUFFER_SIZE], path[BUFFER_SIZE], protocol[BUFFER_SIZE];
+    char req_headers[BUFFER_SIZE] = {0};
+    char method[8], path[BUFFER_SIZE], protocol[16];
 
-    int bytes_received = recv(client_socket, buff, BUFFER_SIZE - 1, 0);
+    int bytes_received = recv(client_socket, req_headers, BUFFER_SIZE - 1, 0);
     if (bytes_received < 0) {
         if (running) {
             fprintf(stderr, "Error receiving request\n");
@@ -241,9 +241,9 @@ static void handle_conn(int client_socket) {
         goto cleanup;
     }
 
-    buff[bytes_received] = '\0';
+    req_headers[bytes_received] = '\0';
 
-    if (sscanf(buff, "%s %s %s", method, path, protocol) != 3) {
+    if (sscanf(req_headers, "%7s %1023s %15s", method, path, protocol) != 3) {
         send_res(client_socket, 400);
         goto cleanup;
     }
