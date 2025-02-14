@@ -20,21 +20,34 @@ void handle_sigact(int sig) {
     running = false;
 }
 
+unsigned int set_uint(const char *opt, unsigned int def_v) {
+    char *endptr;
+    errno = 0;
+    unsigned long new_v = strtoul(opt, &endptr, 10);
+    if (errno != 0 || *endptr != '\0') {
+        return def_v;
+    }
+    return (unsigned int)new_v;
+}
+
 int main(int argc, const char *argv[]) {
-    uint16_t port = 10030;
-    int max_thread = thread_count();
-    int max_queue = MAX_QUEUE;
-    int max_conn = MAX_CONNECTIONS;
+    uint16_t port = PORT;
+    unsigned int max_thread = thread_count();
+    unsigned int max_queue = MAX_QUEUE;
+    unsigned int max_conn = MAX_CONNECTIONS;
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--port") == 0 && i + 1 < argc) {
             port = (uint16_t)atoi(argv[i + 1]);
+            if (port == 0) {
+                port = PORT;
+            }
         } else if (strcmp(argv[i], "--max-thread") == 0 && i + 1 < argc) {
-            max_thread = atoi(argv[i + 1]);
+            max_thread = set_uint(argv[i + 1], max_thread);
         } else if (strcmp(argv[i], "--max-queue") == 0 && i + 1 < argc) {
-            max_queue = atoi(argv[i + 1]);
+            max_queue = set_uint(argv[i + 1], max_queue);
         } else if (strcmp(argv[i], "--max-conn") == 0 && i + 1 < argc) {
-            max_conn = atoi(argv[i + 1]);
+            max_conn = set_uint(argv[i + 1], max_queue);
         }
     }
 
