@@ -111,9 +111,9 @@ There is a list of options available:
 | Option         | Default Value | Description                                                       |
 | -------------- | ------------- | ----------------------------------------------------------------- |
 | `--port`       | `10030`       | Specify exception-filter port                                     |
-| `--max-thread` | CPU core      | Specify worker threads that can run simultaneously in thread pool |
+| `--max-thread` | CPU(s)        | Specify worker threads that can run simultaneously in thread pool |
 | `--max-queue`  | `256`         | Specify task in queue in thread pool                              |
-| `--max-conn`   | `16`          | Specify the backlog queue size for the socket                     |
+| `--max-conn`   | `16`          | Specify backlog queue size for the socket                         |
 
 ```sh
 out/exception-filter --port <PORT>
