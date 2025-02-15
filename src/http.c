@@ -9,14 +9,10 @@
 #include <unistd.h>
 
 static void send_res(int client_socket, int status_code) {
-    char status_line[BUFFER_SIZE];
-    char res_header[BUFFER_SIZE];
-    char res[BUFFER_SIZE * 2];
-    // Buffer for formatted date strings
-    char date_str_header[256];
-    char date_str[128];
-
     const char *status_message = NULL;
+    char status_line[BUFFER_SIZE], res_header[BUFFER_SIZE], res[BUFFER_SIZE * 2],
+        // Buffer for formatted date strings
+        date_str_header[256], date_str[128];
 
     switch (status_code) {
         case 204:
