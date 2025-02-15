@@ -71,6 +71,7 @@ thread_pool_t *thread_pool_create(int max_thread, int max_queue) {
     for (int i = 0; i < max_thread; i++) {
         if (pthread_create(&pool->threads[i], NULL, thread_pool_thread, (void *)pool) != 0) {
             printf("Failed to create thread\n");
+            pool->thread_count = i;
             // Destroy already created threads, mutex, and condition variables, and free allocated memory
             thread_pool_destroy(pool);
             return NULL;
@@ -119,6 +120,7 @@ void thread_pool_destroy(thread_pool_t *pool) {
 
     // Wake up all threads (broadcast) so they can check the shutdown flag
     pthread_cond_broadcast(&pool->queue_not_empty);
+    pthread_cond_broadcast(&pool->queue_not_full);
     pthread_mutex_unlock(&pool->queue_mutex);
 
     // Wait for all threads to finish
@@ -137,7 +139,7 @@ void thread_pool_destroy(thread_pool_t *pool) {
 int thread_count() {
     long count = sysconf(_SC_NPROCESSORS_ONLN);
     if (count == -1) {
-        return 2;
+        return 1;
     }
     return (int)count;
 }
