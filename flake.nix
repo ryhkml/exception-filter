@@ -49,8 +49,8 @@
             gnumake
           ];
           shellHook = ''
-            echo "Exception Filter development shell"
-            echo "Build dengan: nix build"
+            echo "exception-filter development shell"
+            echo "Build: nix build"
           '';
         };
       }

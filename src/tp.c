@@ -83,7 +83,7 @@ thread_pool_t *thread_pool_create(int max_thread, int max_queue) {
 
 int thread_pool_add_task(thread_pool_t *pool, void (*fn)(void *), void *arg) {
     if (pool == NULL || fn == NULL) {
-        fprintf(stderr, "Thread pool or function is NULL.\n");
+        fprintf(stderr, "Thread pool or function is NULL\n");
         return -1;
     }
 
