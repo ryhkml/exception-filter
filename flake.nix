@@ -36,6 +36,7 @@
               cp out/exception-filter $out/bin/
             '';
           };
+          default = self.packages.${system}.exception-filter;
         };
 
         apps.default = {
