@@ -41,7 +41,13 @@
 
         apps.default = {
           type = "app";
-          program = "${self.packages.${system}.default}/bin/exception-filter";
+          program =
+            let
+              wrapper = pkgs.writeShellScriptBin "exception-filter-wrapper" ''
+                ${self.packages.${system}.exception-filter}/bin/exception-filter "$@"
+              '';
+            in
+            "${wrapper}/bin/exception-filter-wrapper";
         };
 
         devShells.default = pkgs.mkShell {
