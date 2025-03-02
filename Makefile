@@ -1,6 +1,6 @@
 CFLAGS = -O2 -Wall -Wextra -Wformat -Wformat-security \
          -fstack-protector-strong -D_FORTIFY_SOURCE=2 \
-         -pipe -std=c11 -MMD -MP -pthread
+         -pipe -std=c17 -MMD -MP -pthread
 
 SRC_DIR = src
 OUT_DIR = out
