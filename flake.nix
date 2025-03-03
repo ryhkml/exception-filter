@@ -26,10 +26,10 @@
             src = ./.;
             nativeBuildInputs = with pkgs; [
               gcc
-              gnumake
             ];
             buildPhase = ''
-              make
+              cc -o nob nob.c
+              ./nob
             '';
             installPhase = ''
               mkdir -p $out/bin
@@ -53,7 +53,6 @@
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = with pkgs; [
             gcc
-            gnumake
           ];
           shellHook = ''
             echo "exception-filter development shell"
