@@ -195,9 +195,7 @@ static void send_res(int client_socket, int status_code) {
 
     res_header_len = snprintf(res_header, sizeof(res_header),
                               "Cache-Control: no-cache, no-store, must-revalidate\r\n"
-                              "Connection: close\r\n"
                               "Content-Length: 0\r\n"
-                              "Expires: 0\r\n"
                               "%s"
                               "\r\n",
                               date_str_header);
