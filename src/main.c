@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <errno.h>
+#include <getopt.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -15,34 +16,64 @@ volatile sig_atomic_t running = true;
 
 thread_pool_t *thread_pool;
 
-static unsigned int set_uint(const char *opt, unsigned int def_v) {
+unsigned int set_uint(const char *opt, unsigned int default_value) {
     char *endptr;
     errno = 0;
     unsigned long new_v = strtoul(opt, &endptr, 10);
     if (errno != 0 || *endptr != '\0') {
-        return def_v;
+        return default_value;
     }
     return (unsigned int)new_v;
 }
 
-static void handle_sigact() { running = false; }
+void handle_sigact() { running = false; }
 
-int main(int argc, const char *argv[]) {
+void print_help() {
+    printf("\n");
+    printf("Throwing HTTP exception in Nginx\n");
+    printf("\n");
+    printf("Usage   : exception-filter <options?>\n");
+    printf("Options :\n");
+    printf("  --max-conn <uint>    Specify backlog queue size for the socket\n");
+    printf("  --max-queue <uint>   Specify task in queue in thread pool\n");
+    printf("  --max-thread <uint>  Specify worker threads that can run simultaneously in thread pool\n");
+    printf("  --port <uint16>      Specify exception-filter port\n");
+    printf("\n");
+    printf("  -h, --help           Display help message\n");
+    printf("\n");
+}
+
+int main(int argc, char *argv[]) {
     uint16_t port = PORT;
     unsigned int max_thread = thread_count();
     unsigned int max_queue = MAX_QUEUE;
     unsigned int max_conn = MAX_CONNECTIONS;
 
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--port") == 0 && i + 1 < argc) {
-            port = (uint16_t)atoi(argv[i + 1]);
-            if (port == 0) port = PORT;
-        } else if (strcmp(argv[i], "--max-thread") == 0 && i + 1 < argc) {
-            max_thread = set_uint(argv[i + 1], max_thread);
-        } else if (strcmp(argv[i], "--max-queue") == 0 && i + 1 < argc) {
-            max_queue = set_uint(argv[i + 1], max_queue);
-        } else if (strcmp(argv[i], "--max-conn") == 0 && i + 1 < argc) {
-            max_conn = set_uint(argv[i + 1], max_queue);
+    struct option some_options[] = {
+        {"max-conn",   required_argument, NULL, 0  },
+        {"max-queue",  required_argument, NULL, 0  },
+        {"max-thread", required_argument, NULL, 0  },
+        {"port",       required_argument, NULL, 0  },
+        {"help",       no_argument,       NULL, 'h'},
+        {0,            0,                 0,    0  }
+    };
+
+    int opt_long;
+    int opt_index = 0;
+    while ((opt_long = getopt_long(argc, argv, "h", some_options, &opt_index)) != -1) {
+        switch (opt_long) {
+            case 'h':
+                print_help();
+                return EXIT_SUCCESS;
+            case 0:
+                if (opt_index == 0) max_conn = set_uint(optarg, max_conn);
+                if (opt_index == 1) max_queue = set_uint(optarg, max_queue);
+                if (opt_index == 2) max_thread = set_uint(optarg, max_thread);
+                if (opt_index == 3) port = (uint16_t)atoi(optarg);
+                break;
+            default:
+                printf("Unknown option. Use -h or --help for help\n");
+                return EXIT_FAILURE;
         }
     }
 

@@ -31,6 +31,6 @@ typedef struct {
 thread_pool_t *thread_pool_create(int max_thread, int max_queue);
 int thread_pool_add_task(thread_pool_t *pool, void (*fn)(void *), void *arg);
 void thread_pool_destroy(thread_pool_t *pool);
-int thread_count();
+unsigned int thread_count();
 
 #endif  // THREAD_POOL_H

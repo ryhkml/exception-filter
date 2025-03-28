@@ -136,10 +136,10 @@ void thread_pool_destroy(thread_pool_t *pool) {
     free(pool);
 }
 
-int thread_count() {
+unsigned int thread_count() {
     long count = sysconf(_SC_NPROCESSORS_ONLN);
     if (count == -1) {
         return 1;
     }
-    return (int)count;
+    return (unsigned int)count;
 }
