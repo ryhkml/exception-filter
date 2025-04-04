@@ -14,16 +14,29 @@
 
 volatile sig_atomic_t running = true;
 
+struct exception_filter_optv {
+    uint16_t port;
+    unsigned int max_conn;
+    unsigned int max_queue;
+    unsigned int max_thread;
+};
+
 thread_pool_t *thread_pool;
 
-unsigned int set_uint(const char *opt, unsigned int default_value) {
+unsigned int touint(const char *opt, unsigned int default_v) {
     char *endptr;
     errno = 0;
     unsigned long new_v = strtoul(opt, &endptr, 10);
-    if (errno != 0 || *endptr != '\0') {
-        return default_value;
-    }
+    if (errno != 0 || *endptr != '\0') return default_v;
     return (unsigned int)new_v;
+}
+
+uint16_t toport(const char *opt) {
+    char *endptr;
+    errno = 0;
+    unsigned long new_v = strtoul(opt, &endptr, 10);
+    if (errno != 0 || *endptr != '\0' || new_v == 0 || new_v > UINT16_MAX) return DEFAULT_PORT;
+    return (uint16_t)new_v;
 }
 
 void handle_sigact() { running = false; }
@@ -44,11 +57,12 @@ void print_help() {
 }
 
 int main(int argc, char *argv[]) {
-    uint16_t port = PORT;
-    unsigned int max_thread = thread_count();
-    unsigned int max_queue = MAX_QUEUE;
-    unsigned int max_conn = MAX_CONNECTIONS;
-
+    struct exception_filter_optv opt_v = {
+        .port = DEFAULT_PORT,
+        .max_conn = DEFAULT_MAX_CONNECTIONS,
+        .max_queue = DEFAULT_MAX_QUEUE,
+        .max_thread = thread_count(),
+    };
     struct option some_options[] = {
         {"max-conn",   required_argument, NULL, 0  },
         {"max-queue",  required_argument, NULL, 0  },
@@ -66,10 +80,10 @@ int main(int argc, char *argv[]) {
                 print_help();
                 return EXIT_SUCCESS;
             case 0:
-                if (opt_index == 0) max_conn = set_uint(optarg, max_conn);
-                if (opt_index == 1) max_queue = set_uint(optarg, max_queue);
-                if (opt_index == 2) max_thread = set_uint(optarg, max_thread);
-                if (opt_index == 3) port = (uint16_t)atoi(optarg);
+                if (opt_index == 0) opt_v.max_conn = touint(optarg, opt_v.max_conn);
+                if (opt_index == 1) opt_v.max_queue = touint(optarg, opt_v.max_queue);
+                if (opt_index == 2) opt_v.max_thread = touint(optarg, opt_v.max_thread);
+                if (opt_index == 3) opt_v.port = toport(optarg);
                 break;
             default:
                 printf("Unknown option. Use -h or --help for help\n");
@@ -92,8 +106,8 @@ int main(int argc, char *argv[]) {
     }
 
     // Set SO_REUSEADDR option to allow ports to be reused immediately after the server is stopped
-    int opt = 1;
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+    int opt_sock = 1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt_sock, sizeof(opt_sock)) < 0) {
         close(server_fd);
         return EXIT_SUCCESS;
     }
@@ -102,21 +116,21 @@ int main(int argc, char *argv[]) {
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    addr.sin_port = htons(port);
+    addr.sin_port = htons(opt_v.port);
 
     if (bind(server_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
         close(server_fd);
         return EXIT_FAILURE;
     }
 
-    if (listen(server_fd, max_conn) < 0) {
+    if (listen(server_fd, opt_v.max_conn) < 0) {
         close(server_fd);
         return EXIT_FAILURE;
     }
 
-    printf("Exception filter server listening on http://127.0.0.1:%d\n", port);
+    printf("Exception filter server listening on http://127.0.0.1:%d\n", opt_v.port);
 
-    thread_pool = thread_pool_create(max_thread, max_queue);
+    thread_pool = thread_pool_create(opt_v.max_thread, opt_v.max_queue);
     if (thread_pool == NULL) {
         fprintf(stderr, "Failed to create thread pool\n");
         close(server_fd);

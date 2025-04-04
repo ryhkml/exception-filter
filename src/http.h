@@ -14,8 +14,8 @@
 // the MAX_CONNECTIONS limit.
 //
 // The optimal value for MAX_CONNECTIONS depends on the estimated server load.
-#define MAX_CONNECTIONS 16
-#define PORT 10030
+#define DEFAULT_MAX_CONNECTIONS 16
+#define DEFAULT_PORT 10030
 
 extern volatile sig_atomic_t running;
 

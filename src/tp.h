@@ -7,7 +7,7 @@
 // This queue temporarily stores tasks before they are processed by worker threads.
 //
 // If the queue is full, thread_pool_add_task() in thread pool will block (wait) until space becomes available.
-#define MAX_QUEUE 256
+#define DEFAULT_MAX_QUEUE 256
 
 typedef struct {
     void (*fn)(void *);
