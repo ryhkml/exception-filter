@@ -110,10 +110,11 @@ There is a list of options available:
 
 | Option         | Default Value | Description                                                       |
 | -------------- | ------------- | ----------------------------------------------------------------- |
-| `--port`       | `10030`       | Specify exception-filter port                                     |
+| `-h`, `--help` |               | Display help message                                              |
+| `--max-conn`   | 16            | Specify backlog queue size for the socket                         |
+| `--max-queue`  | 256           | Specify task in queue in thread pool                              |
 | `--max-thread` | CPU(s)        | Specify worker threads that can run simultaneously in thread pool |
-| `--max-queue`  | `256`         | Specify task in queue in thread pool                              |
-| `--max-conn`   | `16`          | Specify backlog queue size for the socket                         |
+| `--port`       | 10030         | Specify exception-filter port                                     |
 
 ```sh
 out/exception-filter --port <PORT>
@@ -121,12 +122,15 @@ out/exception-filter --port <PORT>
 
 ## Formatter
 
-`~/.clang-format` is based on [Google](https://google.github.io/styleguide/cppguide.html) style guide
+`.clang-format` is based on [Google](https://google.github.io/styleguide/cppguide.html) style guide
 
 ```
 BasedOnStyle: Google
 IndentWidth: 4
 ColumnLimit: 120
+AlignArrayOfStructures: Left
+AlignAfterOpenBracket: Align
+BracedInitializerIndentWidth: 4
 ```
 
 _In Google i trust_
