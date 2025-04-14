@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 static void *thread_pool_thread(void *arg) {
-    thread_pool_t *pool = (thread_pool_t *)arg;
+    thread_pool_t *pool = arg;
     tasks_t task;
 
     while (true) {
@@ -35,8 +35,8 @@ static void *thread_pool_thread(void *arg) {
 }
 
 thread_pool_t *thread_pool_create(int max_thread, int max_queue) {
-    thread_pool_t *pool = (thread_pool_t *)malloc(sizeof(thread_pool_t));
-    if (pool == NULL) {
+    thread_pool_t *pool = malloc(sizeof(thread_pool_t));
+    if (!pool) {
         printf("Failed to allocate memory for thread pool\n");
         return NULL;
     }
@@ -48,10 +48,10 @@ thread_pool_t *thread_pool_create(int max_thread, int max_queue) {
     pool->queue_count = 0;
     pool->shutdown = 0;
 
-    pool->threads = (pthread_t *)malloc(sizeof(pthread_t) * max_thread);
-    pool->queue = (tasks_t *)malloc(sizeof(tasks_t) * max_queue);
+    pool->threads = malloc(sizeof(pthread_t) * max_thread);
+    pool->queue = malloc(sizeof(tasks_t) * max_queue);
 
-    if (pool->threads == NULL || pool->queue == NULL) {
+    if (!pool->threads || !pool->queue) {
         printf("Failed to allocate memory for threads or queue\n");
         if (pool->threads) free(pool->threads);
         if (pool->queue) free(pool->queue);
@@ -82,17 +82,16 @@ thread_pool_t *thread_pool_create(int max_thread, int max_queue) {
 }
 
 int thread_pool_add_task(thread_pool_t *pool, void (*fn)(void *), void *arg) {
-    if (pool == NULL || fn == NULL) {
-        fprintf(stderr, "Thread pool or function is NULL\n");
+    if (!pool || !fn) {
+        printf("Thread pool or function is empty\n");
         return -1;
     }
 
     pthread_mutex_lock(&pool->queue_mutex);
 
     // Wait if queue is full, and not shutting down
-    while (pool->queue_count == pool->queue_size && !pool->shutdown) {
+    while (pool->queue_count == pool->queue_size && !pool->shutdown)
         pthread_cond_wait(&pool->queue_not_full, &pool->queue_mutex);
-    }
 
     // If shutting down and queue is full, don't add task
     if (pool->shutdown) {
@@ -113,7 +112,7 @@ int thread_pool_add_task(thread_pool_t *pool, void (*fn)(void *), void *arg) {
 }
 
 void thread_pool_destroy(thread_pool_t *pool) {
-    if (pool == NULL) return;
+    if (!pool) return;
 
     pthread_mutex_lock(&pool->queue_mutex);
     pool->shutdown = 1;
@@ -124,9 +123,7 @@ void thread_pool_destroy(thread_pool_t *pool) {
     pthread_mutex_unlock(&pool->queue_mutex);
 
     // Wait for all threads to finish
-    for (int i = 0; i < pool->thread_count; i++) {
-        pthread_join(pool->threads[i], NULL);
-    }
+    for (int i = 0; i < pool->thread_count; i++) pthread_join(pool->threads[i], NULL);
 
     free(pool->threads);
     free(pool->queue);
@@ -138,8 +135,6 @@ void thread_pool_destroy(thread_pool_t *pool) {
 
 unsigned int thread_count() {
     long count = sysconf(_SC_NPROCESSORS_ONLN);
-    if (count == -1) {
-        return 1;
-    }
+    if (count == -1) return 1;
     return (unsigned int)count;
 }

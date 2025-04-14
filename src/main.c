@@ -14,7 +14,7 @@
 
 volatile sig_atomic_t running = true;
 
-struct exception_filter_optv {
+struct exception_filter_opt {
     uint16_t port;
     unsigned int max_conn;
     unsigned int max_queue;
@@ -23,7 +23,7 @@ struct exception_filter_optv {
 
 thread_pool_t *thread_pool;
 
-unsigned int touint(const char *opt, unsigned int default_v) {
+static unsigned int touint(const char *opt, unsigned int default_v) {
     char *endptr;
     errno = 0;
     unsigned long new_v = strtoul(opt, &endptr, 10);
@@ -31,7 +31,7 @@ unsigned int touint(const char *opt, unsigned int default_v) {
     return (unsigned int)new_v;
 }
 
-uint16_t toport(const char *opt) {
+static uint16_t toport(const char *opt) {
     char *endptr;
     errno = 0;
     unsigned long new_v = strtoul(opt, &endptr, 10);
@@ -39,9 +39,9 @@ uint16_t toport(const char *opt) {
     return (uint16_t)new_v;
 }
 
-void handle_sigact() { running = false; }
+static void handle_sigact() { running = false; }
 
-void print_help() {
+static void print_help() {
     printf("\n");
     printf("Throwing HTTP exception in Nginx\n");
     printf("\n");
@@ -57,12 +57,13 @@ void print_help() {
 }
 
 int main(int argc, char *argv[]) {
-    struct exception_filter_optv opt_v = {
+    struct exception_filter_opt opt_v = {
         .port = DEFAULT_PORT,
         .max_conn = DEFAULT_MAX_CONNECTIONS,
         .max_queue = DEFAULT_MAX_QUEUE,
         .max_thread = thread_count(),
     };
+
     struct option some_options[] = {
         {"max-conn",   required_argument, NULL, 0  },
         {"max-queue",  required_argument, NULL, 0  },
@@ -85,8 +86,11 @@ int main(int argc, char *argv[]) {
                 if (opt_index == 2) opt_v.max_thread = touint(optarg, opt_v.max_thread);
                 if (opt_index == 3) opt_v.port = toport(optarg);
                 break;
-            default:
+            case '?':
                 printf("Unknown option. Use -h or --help for help\n");
+                return EXIT_FAILURE;
+            default:
+                printf("Failed to parse options\n");
                 return EXIT_FAILURE;
         }
     }
@@ -101,7 +105,7 @@ int main(int argc, char *argv[]) {
 
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) {
-        fprintf(stderr, "Socket creation failed\n");
+        printf("Socket creation failed\n");
         return EXIT_FAILURE;
     }
 
@@ -112,8 +116,7 @@ int main(int argc, char *argv[]) {
         return EXIT_SUCCESS;
     }
 
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
+    struct sockaddr_in addr = {0};
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
     addr.sin_port = htons(opt_v.port);
@@ -128,11 +131,11 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    printf("Exception filter server listening on http://127.0.0.1:%d\n", opt_v.port);
+    printf("Exception filter listening on http://127.0.0.1:%d\n", opt_v.port);
 
     thread_pool = thread_pool_create(opt_v.max_thread, opt_v.max_queue);
-    if (thread_pool == NULL) {
-        fprintf(stderr, "Failed to create thread pool\n");
+    if (!thread_pool) {
+        printf("Failed to create thread pool\n");
         close(server_fd);
         return EXIT_FAILURE;
     }
@@ -141,9 +144,7 @@ int main(int argc, char *argv[]) {
     while (running) {
         int client_socket = accept(server_fd, (struct sockaddr *)&addr, &addr_len);
         if (client_socket < 0) {
-            if (errno == EINTR) {
-                break;
-            }
+            if (errno == EINTR) break;
             continue;
         }
 
@@ -153,7 +154,7 @@ int main(int argc, char *argv[]) {
         }
 
         int *new_sock = malloc(sizeof(int));
-        if (new_sock == NULL) {
+        if (!new_sock) {
             printf("Failed to allocate memory for client socket\n");
             close(client_socket);
             continue;
@@ -161,7 +162,7 @@ int main(int argc, char *argv[]) {
         *new_sock = client_socket;
 
         if (thread_pool_add_task(thread_pool, conn_wrapper, (void *)new_sock) != 0) {
-            fprintf(stderr, "Failed to add task to thread pool\n");
+            printf("Failed to add task to thread pool\n");
             free(new_sock);
             close(client_socket);
         }

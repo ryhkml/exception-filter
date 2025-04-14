@@ -1,6 +1,7 @@
 #include "http.h"
 
 #include <netinet/in.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,10 +11,6 @@
 
 static void send_res(int client_socket, int status_code) {
     const char *status_message = NULL;
-    char status_line[BUFFER_SIZE], res_header[BUFFER_SIZE], res[BUFFER_SIZE * 2],
-        // Buffer for formatted date strings
-        date_str_header[256], date_str[128];
-
     switch (status_code) {
         case 204:
             status_message = "No Content";
@@ -168,84 +165,128 @@ static void send_res(int client_socket, int status_code) {
             break;
     }
 
-    int status_line_len, res_header_len, res_date_header_len, res_len;
-
-    status_line_len = snprintf(status_line, sizeof(status_line), "HTTP/1.1 %d %s\r\n", status_code, status_message);
-    if (status_line_len < 0 || status_line_len >= (int)sizeof(status_line)) {
-        fprintf(stderr, "Status line too long or encoding error\n");
+    char *status_line_buff;
+    size_t status_line_size = snprintf(NULL, 0, "HTTP/1.1 %d %s\r\n", status_code, status_message);
+    status_line_buff = malloc(status_line_size + 1);
+    if (!status_line_buff) {
+        printf("Buy more RAM\n");
         return;
-    }
+    };
+    snprintf(status_line_buff, status_line_size + 1, "HTTP/1.1 %d %s\r\n", status_code, status_message);
 
     // Format the time into a string according to RFC 7231 format
     time_t today = time(NULL);
     struct tm *tm_gmt = gmtime(&today);
-    if (tm_gmt == NULL) {
+    if (!tm_gmt) {
         fprintf(stderr, "There was en error gmtime\n");
+        free(status_line_buff);
         return;
     }
-    if (strftime(date_str, sizeof(date_str), "%a, %d %b %Y %H:%M:%S GMT", tm_gmt) == 0) {
-        fprintf(stderr, "Failed to format date\n");
+    size_t date_buff_init_size = 64;
+    char *date_buff = malloc(date_buff_init_size);
+    if (!date_buff) {
+        printf("Buy more RAM\n");
+        free(status_line_buff);
         return;
     }
-    res_date_header_len = snprintf(date_str_header, sizeof(date_str_header), "Date: %s\r\n", date_str);
-    if (res_date_header_len < 0 || res_date_header_len >= (int)sizeof(date_str_header)) {
-        fprintf(stderr, "Date response header error\n");
+    if (strftime(date_buff, date_buff_init_size, "%a, %d %b %Y %H:%M:%S GMT", tm_gmt) == 0) {
+        printf("Failed to format date\n");
+        free(date_buff);
+        free(status_line_buff);
         return;
+    }
+    size_t date_buff_size = strlen(date_buff);
+    if (date_buff_size < date_buff_init_size) {
+        char *tmp = realloc(date_buff, date_buff_size + 1);
+        if (!tmp) {
+            printf("Failed to realloc\n");
+            free(date_buff);
+            free(status_line_buff);
+            return;
+        }
+        date_buff = tmp;
     }
 
-    res_header_len = snprintf(res_header, sizeof(res_header),
-                              "Cache-Control: no-cache, no-store, must-revalidate\r\n"
-                              "Content-Length: 0\r\n"
-                              "%s"
-                              "\r\n",
-                              date_str_header);
-    if (res_header_len < 0 || res_header_len >= (int)sizeof(res_header)) {
-        fprintf(stderr, "Response header too long or encoding error\n");
+    char *date_header_buff;
+    size_t date_header_size = snprintf(NULL, 0, "Date: %s\r\n", date_buff);
+    date_header_buff = malloc(date_header_size + 1);
+    if (!date_header_buff) {
+        free(date_buff);
+        free(status_line_buff);
         return;
     }
+    snprintf(date_header_buff, date_header_size + 1, "Date: %s\r\n", date_buff);
 
-    res_len = snprintf(res, sizeof(res), "%s%s", status_line, res_header);
-    if (res_len < 0 || res_len >= (int)sizeof(res)) {
-        fprintf(stderr, "Response too long or encoding error\n");
+    char *res_header_buff;
+    size_t res_header_size = snprintf(NULL, 0,
+                                      "Cache-Control: no-cache, no-store, must-revalidate\r\n"
+                                      "Content-Length: 0\r\n"
+                                      "%s"
+                                      "\r\n",
+                                      date_header_buff);
+    res_header_buff = malloc(res_header_size + 1);
+    if (!res_header_buff) {
+        printf("Buy more RAM\n");
+        free(date_header_buff);
+        free(date_buff);
+        free(status_line_buff);
         return;
     }
+    snprintf(res_header_buff, res_header_size + 1,
+             "Cache-Control: no-cache, no-store, must-revalidate\r\n"
+             "Content-Length: 0\r\n"
+             "%s"
+             "\r\n",
+             date_header_buff);
 
-    if (send(client_socket, res, res_len, 0) == -1) {
+    char *res_buff;
+    size_t res_size = snprintf(NULL, 0, "%s%s", status_line_buff, res_header_buff);
+    res_buff = malloc(res_size + 1);
+    if (!res_buff) {
+        printf("Buy more RAM\n");
+        free(res_header_buff);
+        free(date_header_buff);
+        free(date_buff);
+        free(status_line_buff);
+        return;
+    }
+    snprintf(res_buff, res_size + 1, "%s%s", status_line_buff, res_header_buff);
+
+    if (send(client_socket, res_buff, res_size, 0) == -1) {
         fprintf(stderr, "Error sending response\n");
     }
+
+    free(res_buff);
+    free(res_header_buff);
+    free(date_header_buff);
+    free(date_buff);
+    free(status_line_buff);
 }
 
 static void handle_conn(int client_socket) {
-    char req_headers[BUFFER_SIZE] = {0};
-    char method[8], path[BUFFER_SIZE], protocol[16];
+    char path[7], method[9], protocol[17], req_headers[BUFFER_SIZE];
 
     int bytes_received = recv(client_socket, req_headers, BUFFER_SIZE - 1, 0);
     if (bytes_received < 0) {
-        if (running) {
-            fprintf(stderr, "Error receiving request\n");
-        }
-        goto cleanup;
+        if (running) printf("Error receiving request\n");
+        goto done;
     }
     if (bytes_received == 0) {
         printf("Client disconnected\n");
-        goto cleanup;
+        goto done;
     }
 
-    if (!running) {
-        goto cleanup;
-    }
+    if (!running) goto done;
 
-    req_headers[bytes_received] = '\0';
-
-    if (sscanf(req_headers, "%7s %1023s %15s", method, path, protocol) != 3) {
+    if (sscanf(req_headers, "%8s %6s %16s", method, path, protocol) != 3) {
         send_res(client_socket, 400);
-        goto cleanup;
+        goto done;
     }
 
     if (strcmp(method, "GET") == 0) {
         if (strncmp(path, "/", 1) == 0 && strlen(path) > 1) {
             char *status_str = path + 1;
-            long status_code = strtol(status_str, NULL, 10);
+            uint16_t status_code = atoi(status_str);
             if (status_code >= 100 && status_code < 600) {
                 send_res(client_socket, (int)status_code);
             } else {
@@ -258,7 +299,7 @@ static void handle_conn(int client_socket) {
         send_res(client_socket, 405);
     }
 
-cleanup:
+done:
     close(client_socket);
 }
 
