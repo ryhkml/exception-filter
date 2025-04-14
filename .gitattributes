@@ -1,5 +1,1 @@
-# Don't count build and test in the language stats
-test/**/*.c linguist-documentation
-test/**/*.h linguist-documentation
-#
 nob.h linguist-vendored
