@@ -5,6 +5,10 @@
 int main(int argc, char **argv) {
     NOB_GO_REBUILD_URSELF(argc, argv);
 
+    remove("nob.old");
+    remove("out/exception-filter");
+    remove("out/exception-filter.d");
+
     Nob_Cmd cmd = {0};
     nob_cmd_append(&cmd, "cc", "-O2", "-Wall", "-Wextra", "-Wformat", "-Wformat-security", "-fstack-protector-strong",
                    "-D_FORTIFY_SOURCE=2", "-pipe", "-std=c17", "-MMD", "-MP", "-pthread", "-o", "out/exception-filter",
