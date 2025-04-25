@@ -23,22 +23,6 @@ struct exception_filter_opt {
 
 thread_pool_t *thread_pool;
 
-static unsigned int touint(const char *opt, unsigned int default_v) {
-    char *endptr;
-    errno = 0;
-    unsigned long new_v = strtoul(opt, &endptr, 10);
-    if (errno != 0 || *endptr != '\0') return default_v;
-    return (unsigned int)new_v;
-}
-
-static uint16_t toport(const char *opt) {
-    char *endptr;
-    errno = 0;
-    unsigned long new_v = strtoul(opt, &endptr, 10);
-    if (errno != 0 || *endptr != '\0' || new_v == 0 || new_v > UINT16_MAX) return DEFAULT_PORT;
-    return (uint16_t)new_v;
-}
-
 static void handle_sigact() { running = false; }
 
 static void print_help() {
@@ -81,10 +65,12 @@ int main(int argc, char *argv[]) {
                 print_help();
                 return EXIT_SUCCESS;
             case 0:
-                if (opt_index == 0) opt_v.max_conn = touint(optarg, opt_v.max_conn);
-                if (opt_index == 1) opt_v.max_queue = touint(optarg, opt_v.max_queue);
-                if (opt_index == 2) opt_v.max_thread = touint(optarg, opt_v.max_thread);
-                if (opt_index == 3) opt_v.port = toport(optarg);
+                if (opt_index == 0)
+                    opt_v.max_conn = atoi(optarg) != 0 ? (unsigned int)atoi(optarg) : DEFAULT_MAX_CONNECTIONS;
+                if (opt_index == 1)
+                    opt_v.max_queue = atoi(optarg) != 0 ? (unsigned int)atoi(optarg) : DEFAULT_MAX_QUEUE;
+                if (opt_index == 2) opt_v.max_thread = atoi(optarg) != 0 ? (unsigned int)atoi(optarg) : thread_count();
+                if (opt_index == 3) opt_v.port = atoi(optarg) != 0 ? (uint16_t)atoi(optarg) : DEFAULT_PORT;
                 break;
             case '?':
                 printf("Unknown option. Use -h or --help for help\n");
