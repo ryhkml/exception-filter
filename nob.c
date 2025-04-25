@@ -7,12 +7,11 @@ int main(int argc, char **argv) {
 
     remove("nob.old");
     remove("out/exception-filter");
-    remove("out/exception-filter.d");
 
     Nob_Cmd cmd = {0};
-    nob_cmd_append(&cmd, "cc", "-O2", "-Wall", "-Wextra", "-Wformat", "-Wformat-security", "-fstack-protector-strong",
-                   "-D_FORTIFY_SOURCE=2", "-pipe", "-std=c17", "-MMD", "-MP", "-pthread", "-o", "out/exception-filter",
-                   "src/main.c", "src/http.c", "src/tp.c");
+    nob_cmd_append(&cmd, "gcc", "-O2", "-Wall", "-Wextra", "-Wformat", "-Wformat-security", "-fstack-protector-strong",
+                   "-D_FORTIFY_SOURCE=2", "-pipe", "-std=c17", "-pthread", "-o", "out/exception-filter", "src/main.c",
+                   "src/http.c", "src/tp.c");
 
     if (!nob_cmd_run_sync(cmd)) return 1;
     return 0;
