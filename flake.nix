@@ -28,7 +28,7 @@
               gcc
             ];
             buildPhase = ''
-              cc -o nob nob.c
+              gcc -o nob nob.c
               ./nob
             '';
             installPhase = ''
