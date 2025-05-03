@@ -286,9 +286,9 @@ static void handle_conn(int client_socket) {
     if (strcmp(method, "GET") == 0) {
         if (strncmp(path, "/", 1) == 0 && strlen(path) > 1) {
             char *status_str = path + 1;
-            uint16_t status_code = atoi(status_str);
+            uint16_t status_code = (uint16_t)atoi(status_str);
             if (status_code >= 100 && status_code < 600) {
-                send_res(client_socket, (int)status_code);
+                send_res(client_socket, status_code);
             } else {
                 send_res(client_socket, 400);
             }
