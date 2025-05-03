@@ -126,7 +126,7 @@ You can also add 4xx errors in the same way as the 5xx error example above.
 ## Build and Usage
 
 ```sh
-cc -o nob nob.c
+gcc -o nob nob.c
 ./nob
 ```
 
