@@ -23,6 +23,7 @@ location @err_500 {
     internal;
 
     rewrite ^ /500$1 break;
+    # exception-filter service
     proxy_pass http://127.0.0.1:10030;
     proxy_set_header Host $host;
 
@@ -33,11 +34,12 @@ location @err_500 {
 The location name `@err_500` forwards error processing to `http://127.0.0.1:10030`, which serves as the exception-filter URL.
 Then, simply include it in the domain configuration section below
 
-```
+```conf
 # /etc/nginx/.../domain.conf
 server {
-    listen 443 default_server ssl;
-    listen [::]:443 default_server ssl;
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
 
     server_name <DOMAIN>;
 
@@ -45,16 +47,33 @@ server {
 
     ssl_certificate ...;
     ssl_certificate_key ...;
-    ssl_trusted_certificate ...;
+    # Optional
+    # ssl_trusted_certificate ...;
+
+    # include default headers
 
     location / {
-        proxy_pass http://<YOUR APP>;
+        proxy_pass http://<APP>;
         proxy_set_header Host $host;
-
         include /etc/nginx/.../proxy.conf;
     }
 
     include /etc/nginx/.../catch-error.conf;
+}
+# For 3xx redirects
+server {
+    listen 80;
+    listen [::]:80;
+
+    server_name <DOMAIN>;
+
+    include /etc/nginx/conf.d/redirect.conf;
+
+    location / {
+        return 301 https://<DOMAIN>$request_uri;
+    }
+
+    include /etc/nginx/conf.d/catch-redirect.conf;
 }
 ```
 
@@ -80,6 +99,9 @@ http {
 
         include /etc/nginx/.../status-code-error.conf;
 
+        # This section is crucial
+        # Create a dummy certificate using OpenSSL
+        # This step aims to ensure that if there is access using the IP address directly, it will return a 444 error
         ssl_stapling off;
         ssl_certificate /etc/nginx/tls-dummy/fullchain.pem;
         ssl_certificate_key /etc/nginx/tls-dummy/cert-key.pem;
