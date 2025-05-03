@@ -165,9 +165,8 @@ static void send_res(int client_socket, int status_code) {
             break;
     }
 
-    char *status_line_buff;
     size_t status_line_size = snprintf(NULL, 0, "HTTP/1.1 %d %s\r\n", status_code, status_message);
-    status_line_buff = malloc(status_line_size + 1);
+    char *status_line_buff = malloc(status_line_size + 1);
     if (!status_line_buff) {
         printf("Buy more RAM\n");
         return;
@@ -207,9 +206,8 @@ static void send_res(int client_socket, int status_code) {
         date_buff = tmp;
     }
 
-    char *date_header_buff;
     size_t date_header_size = snprintf(NULL, 0, "Date: %s\r\n", date_buff);
-    date_header_buff = malloc(date_header_size + 1);
+    char *date_header_buff = malloc(date_header_size + 1);
     if (!date_header_buff) {
         free(date_buff);
         free(status_line_buff);
@@ -217,14 +215,13 @@ static void send_res(int client_socket, int status_code) {
     }
     snprintf(date_header_buff, date_header_size + 1, "Date: %s\r\n", date_buff);
 
-    char *res_header_buff;
     size_t res_header_size = snprintf(NULL, 0,
                                       "Cache-Control: no-cache, no-store, must-revalidate\r\n"
                                       "Content-Length: 0\r\n"
                                       "%s"
                                       "\r\n",
                                       date_header_buff);
-    res_header_buff = malloc(res_header_size + 1);
+    char *res_header_buff = malloc(res_header_size + 1);
     if (!res_header_buff) {
         printf("Buy more RAM\n");
         free(date_header_buff);
@@ -239,9 +236,8 @@ static void send_res(int client_socket, int status_code) {
              "\r\n",
              date_header_buff);
 
-    char *res_buff;
     size_t res_size = snprintf(NULL, 0, "%s%s", status_line_buff, res_header_buff);
-    res_buff = malloc(res_size + 1);
+    char *res_buff = malloc(res_size + 1);
     if (!res_buff) {
         printf("Buy more RAM\n");
         free(res_header_buff);
