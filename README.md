@@ -10,7 +10,7 @@ For example: `http://127.0.0.1:10030/500`
 Instead of using Nginx's default error page, you can implement exception-filter in Nginx as follows
 
 ```
-# /etc/nginx/.../status-code-error.conf
+# /etc/nginx/conf.d/status-code-error.conf
 error_page 500 501 504 505 506 507 508 510 511 = @err_500;
 ```
 
@@ -18,16 +18,14 @@ When using directive [error_page](https://nginx.org/en/docs/http/ngx_http_core_m
 The next step is to create a proxy pass configuration that points to the exceptipn-filter URL
 
 ```
-# /etc/nginx/.../catch-error.conf
+# /etc/nginx/conf.d/catch-error.conf
 location @err_500 {
     internal;
-
     rewrite ^ /500$1 break;
-    # exception-filter service
     proxy_pass http://127.0.0.1:10030;
     proxy_set_header Host $host;
 
-    include /etc/nginx/.../proxy.conf;
+    include /etc/nginx/conf.d/proxy.conf;
 }
 ```
 
@@ -35,7 +33,7 @@ The location name `@err_500` forwards error processing to `http://127.0.0.1:1003
 Then, simply include it in the domain configuration section below
 
 ```conf
-# /etc/nginx/.../domain.conf
+# /etc/nginx/sites-available/domain.com.conf
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
@@ -43,22 +41,18 @@ server {
 
     server_name <DOMAIN>;
 
-    include /etc/nginx/.../status-code-error.conf;
+    include /etc/nginx/conf.d/status-code-error.conf;
 
     ssl_certificate ...;
     ssl_certificate_key ...;
-    # Optional
-    # ssl_trusted_certificate ...;
-
-    # include default headers
 
     location / {
-        proxy_pass http://<APP>;
+        proxy_pass http://<YOUR_APP>;
         proxy_set_header Host $host;
-        include /etc/nginx/.../proxy.conf;
+        include /etc/nginx/conf.d/proxy.conf;
     }
 
-    include /etc/nginx/.../catch-error.conf;
+    include /etc/nginx/conf.d/catch-error.conf;
 }
 # For 3xx redirects
 server {
@@ -89,6 +83,8 @@ http {
     ...
     ...
 
+    # This section is crucial, just create a dummy certificate using OpenSSL.
+    # The server block configuration below is for production.
     server {
         listen 80 default_server;
         listen [::]:80 default_server;
@@ -98,21 +94,32 @@ http {
 
         server_name _;
 
-        include /etc/nginx/.../status-code-error.conf;
+        include /etc/nginx/conf.d/status-code-error.conf;
 
-        # This section is crucial
-        # Create a dummy certificate using OpenSSL
-        # This step aims to ensure that if there is access using the IP address directly, it will return a 444 error
         ssl_stapling off;
         ssl_certificate /etc/nginx/tls-dummy/fullchain.pem;
         ssl_certificate_key /etc/nginx/tls-dummy/cert-key.pem;
 
-        include /etc/nginx/.../catch-error.conf;
+        include /etc/nginx/conf.d/catch-error.conf;
 
         return 444;
     }
 
-    include /etc/nginx/.../domain.conf
+    # Comment out the server block configuration above and use the server block configuration below.
+    # The server block configuration below is for the HTTP-01 challenge, a method to verify domain ownership during certificate issuance.
+    #server {
+    #    listen 80 default_server;
+    #    listen [::]:80 default_server;
+	#
+    #    server_name _;
+	#
+    #    location / {
+    #        root /usr/share/nginx/html;
+    #        index index.html index.htm;
+    #    }
+    #}
+
+    include /etc/nginx/sites-available/domain.com.conf
 }
 ```
 
